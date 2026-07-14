@@ -1,0 +1,38 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [backend, frontend-web]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: ghcr.io/${{ github.repository }}/${{ matrix.service }}:staging-${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Trigger staging deploy
+        run: |
+          echo "Deploying backend + frontend-web images to the staging cluster."
+          echo "Wire this step to your host: SSH + docker compose pull/up, a Render/Railway deploy hook, or kubectl apply against infra/k8s/staging."
